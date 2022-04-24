@@ -89,6 +89,21 @@ node n2 {
     labelcoords {120 433}
     interface-peer {eth1 n4}
     interface-peer {eth0 n0}
+    services {ipsec}
+    ipsec-config {
+        configuration {
+            config setup
+            conn 0036516270
+                left=10.0.1.2
+                leftsubnet=10.0.9.0/24
+                right=10.0.6.1
+                rightsubnet=10.0.7.0/24
+                peersname=sun
+                authby=secret
+                sharedkey=secret_key
+                auto=add
+        }
+    }
 }
 
 node n3 {
@@ -130,6 +145,21 @@ node n3 {
     labelcoords {840 409}
     interface-peer {eth0 n5}
     interface-peer {eth1 n1}
+    ipsec-config {
+        configuration {
+            config setup
+            conn 0036516270
+                left=10.0.6.1
+                leftsubnet=10.0.7.0/24
+                right=10.0.1.2
+                rightsubnet=10.0.9.0/24
+                peersname=moon
+                authby=secret
+                sharedkey=secret_key
+                auto=add
+        }
+    }
+    services {ipsec}
 }
 
 node n4 {
