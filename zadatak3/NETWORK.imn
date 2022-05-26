@@ -1,0 +1,520 @@
+node n0 {
+    type router
+    model quagga
+    network-config {
+	hostname FW
+	!
+	interface eth0
+	 ip address 192.0.2.1/24
+	 mac address 42:00:aa:00:00:01
+	 ipv6 address fc00:c000::1/64
+	!
+	interface eth2
+	 ip address 198.51.100.1/24
+	 mac address 42:00:aa:00:00:03
+	!
+	interface lo0
+	 type lo
+	 ip address 127.0.0.1/8
+	!
+	!
+	ip route 10.0.0.0/24 198.51.100.2
+	!
+	router rip
+	 redistribute static
+	 redistribute connected
+	 redistribute ospf
+	 network 0.0.0.0/0
+	!
+	router ripng
+	 redistribute static
+	 redistribute connected
+	 redistribute ospf6
+	 network ::/0
+	!
+    }
+    canvas c0
+    iconcoords {192 480}
+    labelcoords {194 508}
+    interface-peer {eth0 n1}
+    interface-peer {eth2 n2}
+    services {ssh}
+}
+
+node n1 {
+    type router
+    model quagga
+    network-config {
+	hostname ISP
+	!
+	interface eth0
+	 ip address 192.0.2.100/24
+	 mac address 42:00:aa:00:00:00
+	 ipv6 address fc00:c000::100/64
+	!
+	interface eth1
+	 ip address 10.0.0.1/24
+	 mac address 42:00:aa:00:00:09
+	 ipv6 address fc00:1000::1/64
+	!
+	interface lo0
+	 type lo
+	 ip address 127.0.0.1/8
+	!
+	router rip
+	 neighbor 10.0.0.2
+	 network 192.0.2.0/24
+	!
+	router ripng
+	 redistribute static
+	 redistribute connected
+	 redistribute ospf6
+	 network ::/0
+	!
+    }
+    canvas c0
+    iconcoords {72 336}
+    labelcoords {33 338}
+    interface-peer {eth0 n0}
+    interface-peer {eth1 n11}
+}
+
+node n2 {
+    type lanswitch
+    network-config {
+	hostname dmz
+	!
+    }
+    canvas c0
+    iconcoords {384 480}
+    labelcoords {383 502}
+    interface-peer {e0 n0}
+    interface-peer {e1 n4}
+    interface-peer {e2 n5}
+    interface-peer {e3 n10}
+}
+
+node n3 {
+    type lanswitch
+    network-config {
+	hostname lan
+	!
+    }
+    canvas c0
+    iconcoords {744 480}
+    labelcoords {743 505}
+    interface-peer {e1 n6}
+    interface-peer {e2 n7}
+    interface-peer {e3 n8}
+    interface-peer {e0 n10}
+}
+
+node n4 {
+    type host
+    network-config {
+	hostname ssh
+	!
+	interface eth0
+	 ip address 198.51.100.10/24
+	 mac address 42:00:aa:00:00:04
+	!
+	interface lo0
+	 type lo
+	 ip address 127.0.0.1/8
+	!
+	ip route 10.0.0.0/24 198.51.100.2
+	ip route 0.0.0.0/0 198.51.100.1
+	!
+    }
+    canvas c0
+    iconcoords {240 288}
+    labelcoords {282 282}
+    interface-peer {eth0 n2}
+    services {ssh}
+    custom-configs {
+        custom-config-id nova {
+            custom-command /bin/sh
+            config {
+                ip addr add 127.0.0.1/8 dev lo0
+                ip addr add 198.51.100.10/24 dev eth0
+                
+                ip route add 10.0.0.0/24 via 198.51.100.2
+                ip route add 0.0.0.0/0 via 198.51.100.1
+                
+                rpcbind
+                inetd
+                postfix start
+                
+            }
+        }
+    }
+    custom-selected nova
+    custom-enabled true
+}
+
+node n5 {
+    type host
+    network-config {
+	hostname web
+	!
+	interface eth0
+	 ip address 198.51.100.11/24
+	 mac address 42:00:aa:00:00:05
+	!
+	interface lo0
+	 type lo
+	 ip address 127.0.0.1/8
+	!
+	ip route 10.0.0.0/24 198.51.100.2
+	ip route 0.0.0.0/0 198.51.100.1
+	!
+    }
+    canvas c0
+    iconcoords {528 288}
+    labelcoords {489 287}
+    interface-peer {eth0 n2}
+    services {ssh ftp}
+    custom-configs {
+        custom-config-id nova {
+            custom-command /bin/sh
+            config {
+                ip addr add 127.0.0.1/8 dev lo0
+                ip addr add 198.51.100.11/24 dev eth0
+                
+                ip route add 10.0.0.0/24 via 198.51.100.2
+                ip route add 0.0.0.0/0 via 198.51.100.1
+                
+                rpcbind
+                inetd
+                lighttpd -f /etc/lighttpd/lighttpd.conf
+                
+            }
+        }
+    }
+    custom-enabled true
+    custom-selected nova
+}
+
+node n6 {
+    type host
+    network-config {
+	hostname ssh_int
+	!
+	interface eth0
+	 ip address 10.0.0.10/24
+	 mac address 42:00:aa:00:00:06
+	!
+	interface lo0
+	 type lo
+	 ip address 127.0.0.1/8
+	!
+	ip route 0.0.0.0/0 10.0.0.1
+	!
+	!
+    }
+    canvas c0
+    iconcoords {840 336}
+    labelcoords {840 372}
+    interface-peer {eth0 n3}
+    services {ssh telnet}
+    custom-configs {
+        custom-config-id new {
+            custom-command /bin/sh
+            config {
+                ip addr add 127.0.0.1/8 dev lo0
+                ip addr add 10.0.0.10/24 dev eth0
+                
+                ip route add 0.0.0.0/0 via 10.0.0.1
+                
+                rpcbind
+                inetd
+                postfix start
+                
+            }
+        }
+    }
+    custom-selected new
+    custom-enabled true
+}
+
+node n7 {
+    type pc
+    network-config {
+	hostname int1
+	!
+	interface eth0
+	 mac address 42:00:aa:00:00:07
+	 ip address 10.0.0.21/24
+	!
+	interface lo0
+	 type lo
+	 ip address 127.0.0.1/8
+	!
+	ip route 0.0.0.0/0 10.0.0.1
+	!
+	!
+    }
+    canvas c0
+    iconcoords {624 240}
+    labelcoords {662 235}
+    interface-peer {eth0 n3}
+}
+
+node n8 {
+    type pc
+    network-config {
+	hostname int2
+	!
+	interface eth0
+	 mac address 42:00:aa:00:00:08
+	 ip address 10.0.0.22/24
+	!
+	interface lo0
+	 type lo
+	 ip address 127.0.0.1/8
+	!
+	ip route 0.0.0.0/0 10.0.0.1
+	!
+	!
+    }
+    canvas c0
+    iconcoords {744 264}
+    labelcoords {786 259}
+    interface-peer {eth0 n3}
+    services {}
+}
+
+node n10 {
+    type router
+    model quagga
+    network-config {
+	hostname FW_int
+	!
+	interface eth1
+	 ip address 10.0.0.1/24
+	 mac address 42:00:aa:00:00:0b
+	!
+	interface eth0
+	 ip address 198.51.100.2/24
+	 mac address 42:00:aa:00:00:02
+	!
+	interface lo0
+	 type lo
+	 ip address 127.0.0.1/8
+	!
+	ip route 0.0.0.0/0 198.51.100.1
+	!
+    }
+    canvas c0
+    iconcoords {576 480}
+    labelcoords {577 504}
+    interface-peer {eth0 n2}
+    interface-peer {eth1 n3}
+    services {ssh}
+}
+
+node n11 {
+    type router
+    model quagga
+    network-config {
+	hostname r
+	!
+	interface eth1
+	 ipv6 address fc00::1/64
+	 mac address 42:00:aa:00:00:0c
+	 ip address 203.0.113.1/24
+	!
+	interface eth0
+	 ip address 10.0.0.2/24
+	 mac address 42:00:aa:00:00:0a
+	 ipv6 address fc00:1000::2/64
+	!
+	interface lo0
+	 type lo
+	 ip address 127.0.0.1/8
+	!
+	router rip
+	 neighbor 10.0.0.1
+	 network 203.0.113.0/24
+	!
+	router ripng
+	 redistribute static
+	 redistribute connected
+	 redistribute ospf6
+	 network ::/0
+	!
+    }
+    canvas c0
+    iconcoords {72 192}
+    labelcoords {109 190}
+    interface-peer {eth0 n1}
+    interface-peer {eth1 n12}
+}
+
+node n12 {
+    type ext
+    network-config {
+	hostname ext1
+	!
+	interface ext0
+	 ipv6 address fc00::20/64
+	 mac address 42:00:aa:1b:18:00
+	 ip address 203.0.113.20/24
+	!
+	interface lo0
+	 type lo
+	 ip address 127.0.0.1/8
+	 ipv6 address ::1/128
+	!
+    }
+    canvas c0
+    iconcoords {72 48}
+    labelcoords {107 36}
+    interface-peer {ext0 n11}
+}
+
+link l0 {
+    nodes {n1 n0}
+    bandwidth 0
+}
+
+link l2 {
+    nodes {n0 n2}
+    bandwidth 0
+}
+
+link l3 {
+    nodes {n2 n4}
+    bandwidth 0
+}
+
+link l4 {
+    nodes {n2 n5}
+    bandwidth 0
+}
+
+link l5 {
+    nodes {n3 n6}
+    bandwidth 0
+}
+
+link l6 {
+    nodes {n3 n7}
+    bandwidth 0
+}
+
+link l7 {
+    nodes {n3 n8}
+    bandwidth 0
+}
+
+link l1 {
+    nodes {n2 n10}
+    bandwidth 0
+}
+
+link l9 {
+    nodes {n10 n3}
+    bandwidth 0
+}
+
+link l8 {
+    nodes {n1 n11}
+    bandwidth 0
+}
+
+link l10 {
+    nodes {n11 n12}
+    bandwidth 0
+}
+
+annotation a0 {
+    type rectangle
+    iconcoords {200 252 572 543}
+    color #dddddd
+    bordercolor black
+    width 0
+    canvas c0
+}
+
+annotation a1 {
+    type rectangle
+    iconcoords {581 204 890 545}
+    color #dddddd
+    bordercolor black
+    width 0
+    canvas c0
+}
+
+annotation a2 {
+    type text
+    iconcoords {239 515}
+    label {DMZ}
+    labelcolor #000000
+    font {-family {DejaVu Sans} -size 12 -weight normal -slant roman -underline 0 -overstrike 0}
+    canvas c0
+}
+
+annotation a3 {
+    type text
+    iconcoords {611 528}
+    label {LAN}
+    labelcolor black
+    font {-family {DejaVu Sans} -size 12 -weight normal -slant roman -underline 0 -overstrike 0}
+    canvas c0
+}
+
+annotation a4 {
+    type rectangle
+    iconcoords {18 9 181 543}
+    color #dddddd
+    bordercolor black
+    width 0
+    canvas c0
+}
+
+annotation a5 {
+    type text
+    iconcoords {34 518}
+    label {Internet}
+    labelcolor black
+    font {-family {DejaVu Sans} -size 12 -weight normal -slant roman -underline 0 -overstrike 0}
+    canvas c0
+}
+
+annotation a6 {
+    type text
+    iconcoords {550 449}
+    label {FW+NAT}
+    labelcolor black
+    font {TkTextFont}
+    canvas c0
+}
+
+annotation a7 {
+    type text
+    iconcoords {93 61}
+    label {(mmubuntu)}
+    labelcolor black
+    font {TkTextFont}
+    canvas c0
+}
+
+canvas c0 {
+    name {Canvas0}
+}
+
+option show {
+    interface_names yes
+    ip_addresses yes
+    ipv6_addresses no
+    node_labels yes
+    link_labels yes
+    background_images no
+    annotations yes
+    hostsAutoAssign no
+    grid no
+    iconSize normal
+    zoom 1.0
+}
+
